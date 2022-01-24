@@ -1,0 +1,72 @@
+on:
+  workflow_call:
+    inputs:
+      project_path:
+        required: true
+        type: string
+      build_config:
+        required: false
+        type: string
+        default: Release
+      nupkg_path:
+        required: false
+        type: string
+        default: '**/*.nupkg'
+      run_number_offset:
+        required: false
+        type: number
+        default: 0
+      nuget_source_url:
+        required: true
+        type: string
+      nuget_source_url_2:
+        required: false
+        type: string
+    secrets:
+      nuget_api_key:
+        required: true
+      nuget_api_key_2:
+        required: false
+
+jobs:
+  publish:
+    name: Build, Pack & Publish
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      
+      - name: Setup .NET Core 3.1
+        uses: actions/setup-dotnet@v1.7.2
+        with:
+          dotnet-version: 3.1.x
+
+      - name: Get version number
+        uses: kzrnm/get-net-sdk-project-versions-action@v1
+        id: get_version
+        with:
+          proj-path: ${{ inputs.project_path }}
+
+      - name: Update version number
+        id: update-version
+        run: |
+          export build_number=$(($GITHUB_RUN_NUMBER+"${{ inputs.run_number_offset }}"));
+          export package_version="${{ steps.get_version.outputs.package-version }}"
+          export new_package_version=$(echo $package_version | sed "s/[^.]*$/$build_number/")
+          echo "::set-output name=version::$new_package_version"
+
+      - name: Create the package
+        run: dotnet pack -p:Version=${{ steps.update-version.outputs.version }} --configuration ${{ inputs.build_config }} ${{ inputs.project_path }}
+
+      - name: Add version tag
+        uses: rickstaa/action-create-tag@v1
+        with:
+          tag: ${{ steps.update-version.outputs.version }}
+          message: ${{ steps.update-version.outputs.version }}
+
+      - name: Publish the package to NuGet feed
+        run: dotnet nuget push ${{ inputs.nupkg_path }} --source "${{ inputs.nuget_source_url }}" --api-key "${{ secrets.nuget_api_key }}"
+
+      - name: Publish the package to second NuGet feed
+        if: inputs.nuget_source_url_2 != null
+        run: dotnet nuget push ${{ inputs.nupkg_path }} --source "${{ inputs.nuget_source_url_2 }}" --api-key "${{ secrets.nuget_api_key_2 }}"
