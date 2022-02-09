@@ -11,6 +11,10 @@ on:
       checkout_ref:
         required: false
         type: string
+      do_apply:
+        required: false
+        type: boolean
+        default: false
     secrets:
       tf-api-token:
         required: true
@@ -58,7 +62,7 @@ jobs:
 
       - name: Terraform Plan
         id: plan
-        if: github.event_name == 'pull_request' && steps.validate.outcome == 'success'
+        if: inputs.do_apply == false && steps.validate.outcome == 'success'
         run: terraform plan -no-color
         continue-on-error: true
 
@@ -93,9 +97,9 @@ jobs:
             })
 
       - name: Terraform Outcome Status
-        if: steps.validate.outcome != 'success' || (github.event_name == 'pull_request' && steps.plan.outcome != 'success')
+        if: steps.validate.outcome != 'success' || (inputs.do_apply == false && steps.plan.outcome != 'success')
         run: exit 1
 
       - name: Terraform Apply
-        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        if: inputs.do_apply == true
         run: terraform apply -auto-approve
