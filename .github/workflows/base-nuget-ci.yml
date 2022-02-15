@@ -26,6 +26,16 @@ jobs:
       with:
         dotnet-version: 3.1.x
 
+    - name: Setup .NET Core 5.0
+      uses: actions/setup-dotnet@v1.7.2
+      with:
+        dotnet-version: 5.0.x
+
+    - name: Setup .NET Core 6.0
+      uses: actions/setup-dotnet@v1.7.2
+      with:
+        dotnet-version: 6.0.x
+
     - name: Install trx2junit
       run: |
         export PATH="$PATH:/root/.dotnet/tools"
