@@ -1,0 +1,93 @@
+on:
+  workflow_call:
+    inputs:
+      tag_ref:
+        required: true
+        type: string
+      solution_path:
+        required: true
+        type: string
+      configuration:
+        required: false
+        type: string
+        default: Release
+      nuget_source_url:
+        required: true
+        type: string
+      nuget_source_url_2:
+        required: false
+        type: string
+    secrets:
+      nuget_api_key:
+        required: true
+      nuget_api_key_2:
+        required: false
+
+jobs:
+  try-parse-tag:
+    name: Try Parsing Tag
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.parse.outputs.tag }}
+      is_semantic_version: ${{ steps.parse.outputs.is_semantic_version }}
+      is_prerelease: ${{ steps.parse.outputs.is_prerelease }}
+    env:
+      TAG_REF: ${{ inputs.tag_ref }}
+    steps:
+      - id: parse
+        run: |
+          # This pattern comes from https://semver.org/#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string
+          # However, Bash uses POSIX regular expressions, and POSIX does not support non-capturing groups: (?:...)
+          # To make it compatible, the non-capture modifiers have been removed.
+          tag=${TAG_REF/refs\/tags\//}
+          echo "::set-output name=tag::'$tag'"
+          semantic_version_pattern='^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-((0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(\+([0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*))?$'
+          if [[ $tag =~ $semantic_version_pattern ]]; then
+            echo ::set-output name=is_semantic_version::'true'
+            if [[ ${BASH_REMATCH[4]} != '' ]]; then
+              echo ::set-output name=is_prerelease::'true'
+            else
+              echo ::set-output name=is_prerelease::'false'
+            fi
+          else
+            echo ::set-output name=is_semantic_version::'false'
+            echo ::set-output name=is_prerelease::'false'
+          fi
+
+  publish:
+    name: Publish Packages
+    needs: try-parse-tag
+    runs-on: ubuntu-latest
+    if: ${{ needs.try-parse-tag.outputs.is_semantic_version == 'true' }}
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Setup .NET Core 3.1
+        uses: actions/setup-dotnet@v1.7.2
+        with:
+          dotnet-version: 3.1.x
+
+      - name: Setup .NET Core 5.0
+        uses: actions/setup-dotnet@v1.7.2
+        with:
+          dotnet-version: 5.0.x
+
+      - name: Setup .NET Core 6.0
+        uses: actions/setup-dotnet@v1.7.2
+        with:
+          dotnet-version: 6.0.x
+
+      - name: Restore Dependencies
+        run: dotnet restore ${{ inputs.solution_path }}
+
+      - name: Build Solution
+        run: dotnet build --no-restore --configuration ${{ inputs.configuration }} ${{ inputs.solution_path }}
+
+      - name: Create Packages
+        run: dotnet pack -p:Version=${{ needs.try-parse-tag.outputs.tag }} --configuration ${{ inputs.configuration }} ${{ inputs.solution_path }}
+
+      - name: Publish to NuGet feed
+        run: dotnet nuget push */**.nupkg --source "${{ inputs.nuget_source_url }}" --api-key "${{ secrets.nuget_api_key }}"
+
+      - name: Publish second NuGet feed
+        run: dotnet nuget push */**.nupkg --source "${{ inputs.nuget_source_url_2 }}" --api-key "${{ secrets.nuget_api_key_2 }}"
