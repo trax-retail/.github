@@ -1,0 +1,41 @@
+name: 'Build and Test'
+description: 'Builds and tests dotnet projects and solutions'
+
+inputs:
+  solution_path:
+    required: true
+    type: string
+  dotnet_version:
+    required: false
+    type: string
+    default: 3.1.x
+  build_config:
+    required: false
+    type: string
+    default: Release
+  dotnet_build_args:
+    required: false
+    type: string
+  dotnet_test_args:
+    required: false
+    type: string
+
+runs:
+  using: "composite"
+  steps:
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v1.7.2
+      with:
+        dotnet-version: ${{ inputs.dotnet_version }}
+
+    - name: Restore dependencies
+      run: dotnet restore ${{ inputs.solution_path }}
+      shell: bash
+
+    - name: Build
+      run: dotnet build --no-restore --configuration ${{ inputs.build_config }} ${{ inputs.dotnet_build_args }} ${{ inputs.solution_path }}
+      shell: bash
+
+    - name: Test
+      run: dotnet test --no-build --configuration ${{ inputs.build_config }} --logger "trx" ${{ inputs.dotnet_test_args }} ${{ inputs.solution_path }}
+      shell: bash

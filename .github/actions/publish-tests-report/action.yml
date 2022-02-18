@@ -1,0 +1,31 @@
+name: 'Publish Tests Report'
+description: 'Generates a report for tests results in TRX format'
+inputs:
+  trx_filter:
+    required: false
+    type: string
+    default: 'TestResults/.*[.]trx'
+runs:
+  using: "composite"
+  steps:
+    - name: Install trx2junit
+      run: |
+        export PATH="$PATH:/root/.dotnet/tools"
+        dotnet tool install --global trx2junit --version 1.5.0
+      shell: bash
+
+    - name: Convert Unit Test Results to JUnit format
+      run: |
+        mkdir ./test-results
+        find ./ -print \
+        | grep -i ${{ inputs.trx_filter }} \
+        | while read filename; \
+            do cp $filename "./test-results/$(basename $(dirname $(dirname $filename))).trx"; \
+        done
+        trx2junit ./test-results/*.trx
+      shell: bash
+
+    - name: Publish Unit Test Results
+      uses: EnricoMi/publish-unit-test-result-action@v1
+      with:
+        files: ./test-results/*.xml

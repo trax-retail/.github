@@ -4,6 +4,10 @@ on:
       project_path:
         required: true
         type: string
+      dotnet_version:
+        required: false
+        type: string
+        default: 3.1.x
       build_config:
         required: false
         type: string
@@ -35,21 +39,11 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-      
-      - name: Setup .NET Core 3.1
-        uses: actions/setup-dotnet@v1.7.2
-        with:
-          dotnet-version: 3.1.x
 
-      - name: Setup .NET Core 5.0
+      - name: Setup .NET SDK
         uses: actions/setup-dotnet@v1.7.2
         with:
-          dotnet-version: 5.0.x
-
-      - name: Setup .NET Core 6.0
-        uses: actions/setup-dotnet@v1.7.2
-        with:
-          dotnet-version: 6.0.x
+          dotnet-version: ${{ inputs.dotnet_version }}
 
       - name: Get version number
         uses: kzrnm/get-net-sdk-project-versions-action@v1

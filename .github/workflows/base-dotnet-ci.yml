@@ -4,67 +4,38 @@ on:
       solution_path:
         required: true
         type: string
-      dotnet_test_filter:
+      dotnet_version:
         required: false
         type: string
+        default: 3.1.x
       build_config:
         required: false
         type: string
         default: Release
-      test_results_path:
+      dotnet_build_args:
         required: false
         type: string
-        default: ./test-results
+      dotnet_test_args:
+        required: false
+        type: string
 
 jobs:
   build:
-    name: Build & Test
+    name: Build and Test
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v2
 
-    - name: Setup .NET Core 3.1
-      uses: actions/setup-dotnet@v1.7.2
+    - name: Build and Test
+      uses: trax-retail/.github/.github/actions/dotnet-build-test@1.5
       with:
-        dotnet-version: 3.1.x
-
-    - name: Setup .NET Core 5.0
-      uses: actions/setup-dotnet@v1.7.2
-      with:
-        dotnet-version: 5.0.x
-
-    - name: Setup .NET Core 6.0
-      uses: actions/setup-dotnet@v1.7.2
-      with:
-        dotnet-version: 6.0.x
-
-    - name: Install trx2junit
-      run: |
-        export PATH="$PATH:/root/.dotnet/tools"
-        dotnet tool install --global trx2junit --version 1.5.0
-
-    - name: Restore dependencies
-      run: dotnet restore ${{ inputs.solution_path }}
-
-    - name: Build
-      run: dotnet build --no-restore --configuration ${{ inputs.build_config }} ${{ inputs.solution_path }}
-
-    - name: Test
-      run: dotnet test --no-build --configuration ${{ inputs.build_config }} --logger "trx" ${{ inputs.solution_path }} ${{ inputs.dotnet_test_filter != '' && format('--filter {0}', inputs.dotnet_test_filter) || '' }}
+        solution_path: ${{ inputs.solution_path }}
+        dotnet_version: ${{ inputs.dotnet_version }}
+        build_config: ${{ inputs.build_config }}
+        dotnet_build_args: ${{ inputs.dotnet_build_args }}
+        dotnet_test_args: ${{ inputs.dotnet_test_args }}
       continue-on-error: true
 
-    - name: Convert Unit Test Results to JUnit format
-      run: |
-        mkdir ${{ inputs.test_results_path }}
-        find ./ -print \
-        | grep -i 'TestResults/.*[.]trx' \
-        | while read filename; \
-            do cp $filename "${{ inputs.test_results_path }}/$(basename $(dirname $(dirname $filename))).trx"; \
-        done
-        trx2junit ${{ inputs.test_results_path }}/*.trx
-
     - name: Publish Unit Test Results
-      uses: EnricoMi/publish-unit-test-result-action@v1
-      with:
-        files: ${{ inputs.test_results_path }}/*.xml
+      uses: trax-retail/.github/.github/actions/publish-tests-report@1.5
