@@ -4,6 +4,9 @@ on:
       solution_path:
         required: true
         type: string
+      dotnet_test_filter:
+        required: false
+        type: string
       build_config:
         required: false
         type: string
@@ -46,13 +49,13 @@ jobs:
 
     - name: Build
       run: dotnet build --no-restore --configuration ${{ inputs.build_config }} ${{ inputs.solution_path }}
-      
+
     - name: Test
-      run: dotnet test --no-build --configuration ${{ inputs.build_config }} --logger "trx" ${{ inputs.solution_path }}
+      run: dotnet test --no-build --configuration ${{ inputs.build_config }} --logger "trx" ${{ inputs.solution_path }} ${{ inputs.dotnet_test_filter != '' && format('--filter {0}', inputs.dotnet_test_filter) || '' }}
       continue-on-error: true
 
     - name: Convert Unit Test Results to JUnit format
-      run: | 
+      run: |
         mkdir ${{ inputs.test_results_path }}
         find ./ -print \
         | grep -i 'TestResults/.*[.]trx' \
