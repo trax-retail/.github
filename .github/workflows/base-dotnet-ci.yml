@@ -12,6 +12,9 @@ on:
         required: false
         type: string
         default: Release
+      restore_dotnet_tools:
+        required: false
+        type: boolean
       dotnet_build_args:
         required: false
         type: string
@@ -28,7 +31,7 @@ jobs:
     - uses: actions/checkout@v2
 
     - name: Build and Test
-      uses: trax-retail/.github/.github/actions/dotnet-build-test@1.6
+      uses: trax-retail/.github/.github/actions/dotnet-build-test@1.7
       with:
         solution_path: ${{ inputs.solution_path }}
         dotnet_version: ${{ inputs.dotnet_version }}
@@ -38,4 +41,4 @@ jobs:
       continue-on-error: true
 
     - name: Publish Unit Test Results
-      uses: trax-retail/.github/.github/actions/publish-tests-report@1.6
+      uses: trax-retail/.github/.github/actions/publish-tests-report@1.7

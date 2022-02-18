@@ -13,6 +13,10 @@ inputs:
     required: false
     type: string
     default: Release
+  restore_dotnet_tools:
+    required: false
+    type: boolean
+    default: false
   dotnet_build_args:
     required: false
     type: string
@@ -30,6 +34,11 @@ runs:
 
     - name: Restore dependencies
       run: dotnet restore ${{ inputs.solution_path }}
+      shell: bash
+
+    - name: Restore .Net Tools
+      if: ${{ inputs.restore_dotnet_tools }}
+      run: dotnet tool restore
       shell: bash
 
     - name: Build
