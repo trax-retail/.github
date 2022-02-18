@@ -11,7 +11,7 @@ runs:
     - name: Install trx2junit
       run: |
         export PATH="$PATH:/root/.dotnet/tools"
-        dotnet tool install --global trx2junit --version 1.5.0
+        dotnet tool install --global trx2junit --version 2.0.0
       shell: bash
 
     - name: Convert Unit Test Results to JUnit format
