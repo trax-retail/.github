@@ -5,6 +5,10 @@ inputs:
     required: false
     type: string
     default: 'TestResults/.*[.]trx'
+  check_name:
+    required: false
+    type: string
+    default: 'Test Results'
 runs:
   using: "composite"
   steps:
@@ -14,18 +18,19 @@ runs:
         dotnet tool install --global trx2junit --version 2.0.0
       shell: bash
 
-    - name: Convert Unit Test Results to JUnit format
+    - name: Convert Test Results to JUnit format
       run: |
         mkdir ./test-results
         find ./ -print \
         | grep -i ${{ inputs.trx_filter }} \
         | while read filename; \
-            do cp $filename "./test-results/$(basename $(dirname $(dirname $filename))).trx"; \
+            do cp $filename "./test-results/$(basename $filename)"; \
         done
         trx2junit ./test-results/*.trx
       shell: bash
 
-    - name: Publish Unit Test Results
+    - name: Publish Test Results
       uses: EnricoMi/publish-unit-test-result-action@v1
       with:
         files: ./test-results/*.xml
+        check_name: ${{ inputs.check_name }}
