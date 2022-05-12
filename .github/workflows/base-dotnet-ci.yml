@@ -15,6 +15,10 @@ on:
       restore_dotnet_tools:
         required: false
         type: boolean
+      test_results_directory:
+        required: false
+        type: string
+        default: ./TestResults
       dotnet_build_args:
         required: false
         type: string
@@ -36,9 +40,11 @@ jobs:
         solution_path: ${{ inputs.solution_path }}
         dotnet_version: ${{ inputs.dotnet_version }}
         build_config: ${{ inputs.build_config }}
+        restore_dotnet_tools: ${{ inputs.restore_dotnet_tools }}
+        test_results_directory: ${{ inputs.test_results_directory }}
         dotnet_build_args: ${{ inputs.dotnet_build_args }}
         dotnet_test_args: ${{ inputs.dotnet_test_args }}
-      continue-on-error: true
 
     - name: Publish Unit Test Results
       uses: trax-retail/.github/.github/actions/publish-tests-report@1.7
+      if: success() || failure()    # run this step even if previous step failed

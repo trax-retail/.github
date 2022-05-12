@@ -4,33 +4,52 @@ inputs:
   trx_filter:
     required: false
     type: string
-    default: 'TestResults/.*[.]trx'
+    default: './TestResults/*.trx'
   check_name:
     required: false
     type: string
     default: 'Test Results'
+  github-token:
+    default: ${{ github.token }}
 runs:
   using: "composite"
   steps:
-    - name: Install trx2junit
-      run: |
-        export PATH="$PATH:/root/.dotnet/tools"
-        dotnet tool install --global trx2junit --version 2.0.0
-      shell: bash
-
-    - name: Convert Test Results to JUnit format
-      run: |
-        mkdir ./test-results
-        find ./ -print \
-        | grep -i ${{ inputs.trx_filter }} \
-        | while read filename; \
-            do cp $filename "./test-results/$(basename $filename)"; \
-        done
-        trx2junit ./test-results/*.trx
-      shell: bash
-
-    - name: Publish Test Results
-      uses: EnricoMi/publish-unit-test-result-action@v1
+    - name: Test Results
+      uses: dorny/test-reporter@v1
+      id: test-report
+      if: success() || failure()    # run this step even if previous step failed
       with:
-        files: ./test-results/*.xml
-        check_name: ${{ inputs.check_name }}
+        name: ${{ inputs.check_name }}
+        path: ${{ inputs.trx_filter }}
+        reporter: dotnet-trx
+
+    - name: Prepare results for comment
+      id: test-report-extra
+      if: success() || failure()    # run this step even if previous step failed
+      env:
+          TIME_MS: ${{ steps.test-report.outputs.time }}
+          PASSED: ${{ steps.test-report.outputs.passed }}
+          FAILED: ${{ steps.test-report.outputs.failed }}
+          SKIPPED: ${{ steps.test-report.outputs.skipped }}
+      run: |
+        echo ::set-output name=total::$(($PASSED + $FAILED + $SKIPPED))
+        echo ::set-output name=time_s::$(($TIME_MS / 1000))
+      shell: bash
+
+    - name: Comment PR
+      uses: Beakyn/gha-comment-pull-request@v1.0.2
+      if: success() || failure()    # run this step even if previous step failed
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+      with:
+        comment-message: |
+          ### Conclusion: `${{ steps.test-report.outputs.conclusion }}`
+          ${{ steps.test-report-extra.outputs.time_s }}s [:stopwatch:](## "duration of all tests")
+          ${{ steps.test-report-extra.outputs.total }} tests ${{ steps.test-report.outputs.passed }} [:heavy_check_mark:](## "passed tests") ${{ steps.test-report.outputs.skipped }} [:zzz:](## "skipped / disabled tests") ${{ steps.test-report.outputs.failed }} [:x:](## "failed tests")
+
+          ---
+
+          Results for commit ${{ github.sha }}.
+          For more details on these failures, see [this check](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}).
+
+        delete-previous-comment: true

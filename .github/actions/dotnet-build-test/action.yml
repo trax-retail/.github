@@ -17,6 +17,10 @@ inputs:
     required: false
     type: boolean
     default: false
+  test_results_directory:
+    required: false
+    type: string
+    default: ./TestResults
   dotnet_build_args:
     required: false
     type: string
@@ -46,5 +50,5 @@ runs:
       shell: bash
 
     - name: Test
-      run: dotnet test --no-build --configuration ${{ inputs.build_config }} --logger "trx" ${{ inputs.dotnet_test_args }} ${{ inputs.solution_path }}
+      run: dotnet test --no-build --configuration ${{ inputs.build_config }} --logger "trx" ${{ inputs.dotnet_test_args }} -r ${{ inputs.test_results_directory }} ${{ inputs.solution_path }}
       shell: bash
