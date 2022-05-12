@@ -37,19 +37,46 @@ runs:
       shell: bash
 
     - name: Comment PR
-      uses: Beakyn/gha-comment-pull-request@v1.0.2
-      if: success() || failure()    # run this step even if previous step failed
+      uses: actions/github-script@v6
+      if: github.event_name == 'pull_request'
       env:
-        GITHUB_TOKEN: ${{ inputs.github-token }}
+        COMMENT_BODY_ID: "<!-- test-report-comment-${{ inputs.check_name }} -->"
       with:
-        comment-message: |
-          ### Conclusion: `${{ steps.test-report.outputs.conclusion }}`
+        github-token: ${{ inputs.github-token }}
+        script: |
+          // 1. Retrieve existing bot comments for the PR
+          const { data: comments } = await github.rest.issues.listComments({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+          })
+          const botComment = comments.find(comment => {
+            return comment.user.type === 'Bot' && comment.body.includes(process.env.COMMENT_BODY_ID)
+          })
+
+          // 2. Prepare format of the comment
+          const output = `${process.env.COMMENT_BODY_ID}
+          ### Test Conclusion: \`${{ steps.test-report.outputs.conclusion }}\`
           ${{ steps.test-report-extra.outputs.time_s }}s [:stopwatch:](## "duration of all tests")
           ${{ steps.test-report-extra.outputs.total }} tests ${{ steps.test-report.outputs.passed }} [:heavy_check_mark:](## "passed tests") ${{ steps.test-report.outputs.skipped }} [:zzz:](## "skipped / disabled tests") ${{ steps.test-report.outputs.failed }} [:x:](## "failed tests")
 
           ---
 
           Results for commit ${{ github.sha }}.
-          For more details on these failures, see [this check](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}).
+          For more details on these failures, see [this check](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}).`;
 
-        delete-previous-comment: true
+          // 3. If we have a comment, delete it and create a new one
+          if (botComment) {
+            github.rest.issues.deleteComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: botComment.id
+            })
+          }
+
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: output
+          })

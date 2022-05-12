@@ -1,16 +1,17 @@
 on:
   workflow_call:
     inputs:
-      tf_workspace:
-        required: true
-        type: string
       tf_working_directory:
         required: false
         type: string
         default: 'terraform/remote/'
+      tf_workspace:
+        required: false
+        type: string
       checkout_ref:
         required: false
         type: string
+        default: ''
       do_apply:
         required: false
         type: boolean
@@ -66,35 +67,17 @@ jobs:
         run: terraform plan -no-color
         continue-on-error: true
 
-      - name: Update Pull Request
-        uses: actions/github-script@0.9.0
+      - name: Comment PR
+        uses: trax-retail/.github/.github/actions/publish-terraform-report@1.10
         if: github.event_name == 'pull_request'
-        env:
-          PLAN: "terraform\n${{ steps.plan.outputs.stdout }}"
         with:
+          fmt-outcome: ${{ steps.fmt.outcome }}
+          init-outcome: ${{ steps.init.outcome }}
+          validate-outcome: ${{ steps.validate.outcome }}
+          plan-outcome: ${{ steps.plan.outcome }}
+          validate-stdout: ${{ steps.validate.outputs.stdout }}
+          plan-stdout: ${{ steps.plan.outputs.stdout }}
           github-token: ${{ secrets.github-token }}
-          script: |
-            const output = `#### Terraform Format and Style 🖌\`${{ steps.fmt.outcome }}\`
-            #### Terraform Initialization ⚙️\`${{ steps.init.outcome }}\`
-            #### Terraform Validation 🤖\`${{ steps.validate.outcome }}\`
-            #### Terraform Plan 📖\`${{ steps.plan.outcome }}\`
-
-            <details><summary>Show Plan</summary>
-
-            \`\`\`\n
-            ${process.env.PLAN}
-            \`\`\`
-
-            </details>
-
-            *Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`*`;
-
-            github.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: output
-            })
 
       - name: Terraform Outcome Status
         if: steps.validate.outcome != 'success' || (inputs.do_apply == false && steps.plan.outcome != 'success')

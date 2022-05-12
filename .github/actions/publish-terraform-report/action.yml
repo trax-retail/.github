@@ -1,0 +1,86 @@
+name: 'Publish Terraform Report'
+description: 'Generates a report based on terraform commands outcome'
+
+inputs:
+  fmt-outcome:
+    required: true
+    type: string
+  init-outcome:
+    required: true
+    type: string
+  validate-outcome:
+    required: true
+    type: string
+  plan-outcome:
+    required: true
+    type: string
+  validate-stdout:
+    required: true
+    type: string
+  plan-stdout:
+    required: true
+    type: string
+  github-token:
+    default: ${{ github.token }}
+
+runs:
+  using: "composite"
+  steps:
+
+    - name: Comment PR
+      uses: actions/github-script@v6
+      env:
+        COMMENT_BODY_ID: "<!-- terraform-report-comment -->"
+      with:
+        github-token: ${{ inputs.github-token }}
+        script: |
+          // 1. Retrieve existing bot comments for the PR
+          const { data: comments } = await github.rest.issues.listComments({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+          })
+          const botComment = comments.find(comment => {
+            return comment.user.type === 'Bot' && comment.body.includes(process.env.COMMENT_BODY_ID)
+          })
+
+          // 2. Prepare format of the comment
+          const output = `${process.env.COMMENT_BODY_ID}
+          #### Terraform Format and Style 🖌\`${{ inputs.fmt-outcome }}\`
+          #### Terraform Initialization ⚙️\`${{ inputs.init-outcome }}\`
+          #### Terraform Validation 🤖\`${{ inputs.validate-outcome }}\`
+          <details><summary>Validation Output</summary>
+
+          \`\`\`\n
+          ${{ inputs.validate-stdout }}
+          \`\`\`
+
+          </details>
+
+          #### Terraform Plan 📖\`${{ inputs.plan-outcome }}\`
+
+          <details><summary>Show Plan</summary>
+
+          \`\`\`\n
+          ${{ inputs.plan-stdout }}
+          \`\`\`
+
+          </details>
+
+          *Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`, Commit: ${{ github.sha }}*`;
+
+          // 3. If we have a comment, delete it and create a new one
+          if (botComment) {
+            github.rest.issues.deleteComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: botComment.id
+            })
+          }
+
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: output
+          })
