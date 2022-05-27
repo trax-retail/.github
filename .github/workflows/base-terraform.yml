@@ -64,12 +64,13 @@ jobs:
       - name: Terraform Plan
         id: plan
         if: inputs.do_apply == false && steps.validate.outcome == 'success'
-        run: terraform plan -no-color
+        run: terraform plan -detailed-exitcode -no-color
         continue-on-error: true
 
       - name: Comment PR
         uses: trax-retail/.github/.github/actions/publish-terraform-report@1.10
-        if: github.event_name == 'pull_request'
+        # Skip comment if no changes are planned.
+        if: github.event_name == 'pull_request' && steps.plan.outputs.exitcode == 2
         with:
           fmt-outcome: ${{ steps.fmt.outcome }}
           init-outcome: ${{ steps.init.outcome }}
