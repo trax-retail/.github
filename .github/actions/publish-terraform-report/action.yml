@@ -31,6 +31,8 @@ runs:
       uses: actions/github-script@v6
       env:
         COMMENT_BODY_ID: "<!-- terraform-report-comment -->"
+        VALIDATE: "${{ inputs.validate-stdout }}"
+        PLAN: "${{ inputs.plan-stdout }}"
       with:
         github-token: ${{ inputs.github-token }}
         script: |
@@ -52,7 +54,7 @@ runs:
           <details><summary>Validation Output</summary>
 
           \`\`\`\n
-          ${{ inputs.validate-stdout }}
+          ${process.env.VALIDATE}
           \`\`\`
 
           </details>
@@ -62,7 +64,7 @@ runs:
           <details><summary>Show Plan</summary>
 
           \`\`\`\n
-          ${{ inputs.plan-stdout }}
+          ${process.env.PLAN}
           \`\`\`
 
           </details>
