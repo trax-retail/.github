@@ -13,6 +13,11 @@ on:
         required: false
         type: string
         default: ''
+      terraform_version:
+        description: 'The version of Terraform CLI to install. Instead of full version string you can also specify constraint string starting with "<" (for example `<1.13.0`) to install the latest version satisfying the constraint. A value of `latest` will install the latest version of Terraform CLI. Defaults to `latest`.'
+        default: 'latest'
+        type: string
+        required: false
       do_apply:
         required: false
         type: boolean
@@ -42,8 +47,8 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v1
         with:
-          # terraform_version: 0.13.0
           cli_config_credentials_token: ${{ secrets.tf-api-token }}
+          terraform_version: ${{ inputs.terraform_version }}
 
       - name: Terraform Format
         id: fmt
