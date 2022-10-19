@@ -1,0 +1,33 @@
+name: 'Publish Change Set Report'
+description: 'Converts a Change Set description from AWS CloudFormation into HTML and posts it as a comment on an Issue or Pull Request.'
+
+inputs:
+  
+  issue_number:
+    description: 'The issue number or pull request number.'
+    required: true
+  json_description_file:
+    description: 'The path to the file containing a JSON description of the ChangeSet.'
+    required: true
+    
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    - name: Format as HTML
+      id: format-as-html
+      shell: bash
+      env:
+        JSON_DESCRIPTION_FILE: ${{ inputs.json_description_file }}
+      run: |
+        echo ::set-output name=html::$(cat $JSON_DESCRIPTION_FILE | python3 format-as-html.py)
+    - name: Send Reply Comment
+      uses: peter-evans/create-or-update-comment@v2
+      with:
+        issue-number: ${{ inputs.issue_number }}
+        body: ${{ steps.format-as-html.outputs.html }}
+        
+        
