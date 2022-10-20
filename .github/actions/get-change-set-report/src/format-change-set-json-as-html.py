@@ -98,6 +98,22 @@ class Detail:
       
     return False
 
+class DetailAggregate:
+  details = None
+
+  def __init__(self):
+    self.details = []
+
+  def add_detail(self, detail):
+      self.details.append(detail)
+
+  def has_probable_cause_of_conditional_replacement(self):
+    for detail in self.details:
+       if change.is_conditional_replacement() and ((detail.always_requires_recreation() and detail.is_dynamic_evaluation()) or detail.conditionally_requires_recreation()):
+         return True
+
+    return False
+
 if __name__ == "__main__":
   data = json.load(sys.stdin)
     
@@ -136,16 +152,26 @@ if __name__ == "__main__":
       if (len(details) > 0):
         body += "<ul>"
       
+        detail_aggregates = {}
+      
         for detail_data in details:
           detail = Detail(detail_data)
-          asterisks = ""
+          detail_target = detail.target()
           
-          if change.is_conditional_replacement() and ((detail.always_requires_recreation() and detail.is_dynamic_evaluation()) or detail.conditionally_requires_recreation()):
+          if not detail_target in detail_aggregates.keys():           
+            detail_aggregates[detail_target] = DetailAggregate()
+
+          detail_aggregates[detail_target].add_detail(detail)
+          
+        for detail_target, detail_aggregate in detail_aggregates.items():
+          asterisks = ""
+
+          if detail_aggregate.has_probable_cause_of_conditional_replacement():
             asterisks += " <sup>R</sup>"
             has_probable_cause_of_conditional_replacement = True
-      
-          body += "<li>%s%s</li>" % (detail.target(), asterisks)
-           
+
+          body += "<li>%s%s</li>" % (detail_target, asterisks)
+          
         body += "</ul>"
       else:
         body += "-"
