@@ -35,8 +35,8 @@ runs:
           FAILED: ${{ steps.test-report.outputs.failed }}
           SKIPPED: ${{ steps.test-report.outputs.skipped }}
       run: |
-        echo ::set-output name=total::$(($PASSED + $FAILED + $SKIPPED))
-        echo ::set-output name=time_s::$(($TIME_MS / 1000))
+        echo "total=$(($PASSED + $FAILED + $SKIPPED))" >> $GITHUB_OUTPUT
+        echo "time_s=$(($TIME_MS / 1000))" >> $GITHUB_OUTPUT
       shell: bash
 
     - name: Comment PR

@@ -41,15 +41,15 @@ jobs:
           # To make it compatible, the non-capture modifiers have been removed and the metacharacter for digits (\d) has been replaced by `[0-9]`
           semantic_version_pattern='^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-((0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*))*))?(\+([0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*))?$'
           if [[ ${TAG_NAME} =~ $semantic_version_pattern ]]; then
-            echo ::set-output name=is_semantic_version::'true'
+            echo "is_semantic_version='true'" >> $GITHUB_OUTPUT
             if [[ ${BASH_REMATCH[4]} != '' ]]; then
-              echo ::set-output name=is_prerelease::'true'
+              echo "is_prerelease='true'" >> $GITHUB_OUTPUT
             else
-              echo ::set-output name=is_prerelease::'false'
+              echo "is_prerelease='false'" >> $GITHUB_OUTPUT
             fi
           else
-            echo ::set-output name=is_semantic_version::'false'
-            echo ::set-output name=is_prerelease::'false'
+            echo "is_semantic_version='false'" >> $GITHUB_OUTPUT
+            echo "is_prerelease='false'" >> $GITHUB_OUTPUT
           fi
 
   publish:

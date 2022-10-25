@@ -58,7 +58,7 @@ jobs:
           export build_number=$(($GITHUB_RUN_NUMBER+"${{ inputs.run_number_offset }}"));
           export package_version="${{ steps.get_version.outputs.package-version }}"
           export new_package_version=$(echo $package_version | sed "s/[^.]*$/$build_number/")
-          echo "::set-output name=version::$new_package_version"
+          echo "version=$new_package_version" >> $GITHUB_OUTPUT
 
       - name: Create the package
         run: dotnet pack -p:Version=${{ steps.update-version.outputs.version }} --configuration ${{ inputs.build_config }} ${{ inputs.project_path }}
